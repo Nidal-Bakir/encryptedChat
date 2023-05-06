@@ -20,6 +20,8 @@ abstract class Algorithm {
         } else if (algorithmNumber == 2) {
             new DES(ois, oos, isServer);
         } else if (algorithmNumber == 3) {
+            new AES(ois, oos, isServer);
+        } else if (algorithmNumber == 4) {
             new RSA(ois, oos, isServer);
         }
 
@@ -279,6 +281,79 @@ class DES extends Algorithm {
     }
 }
 
+class AES extends Algorithm {
+    Cipher cipher;
+    IvParameterSpec iv;
+
+    SecretKey key;
+
+    public AES(ObjectInputStream ois, ObjectOutputStream oos, boolean isServer) throws InterruptedException, IOException, NoSuchPaddingException, NoSuchAlgorithmException, ClassNotFoundException, InvalidKeyException {
+        super(ois, oos, isServer);
+    }
+
+    @Override
+    void init() throws IOException, NoSuchAlgorithmException, ClassNotFoundException, NoSuchPaddingException {
+
+        cipher = Cipher.getInstance("AES/CBC/PkCS5Padding");
+
+        if (isServer) {
+            oos.writeUTF("The server will generate the AES secret key....");
+            oos.flush();
+
+            key = KeyGenerator.getInstance("AES").generateKey();
+
+            oos.writeObject(key);
+            oos.flush();
+
+
+            oos.writeUTF("The server will generate the IV Bytes...");
+            oos.flush();
+
+            byte[] ivarr = new byte[16];
+            SecureRandom secureRandom = new SecureRandom();
+            secureRandom.nextBytes(ivarr);
+
+            iv = new IvParameterSpec(ivarr);
+
+            oos.writeObject(ivarr);
+            oos.flush();
+
+        } else {
+            System.out.println(ois.readUTF());
+
+            key = (SecretKey) ois.readObject();
+
+            System.out.println(ois.readUTF());
+
+            byte[] ivarr = (byte[]) ois.readObject();
+
+            iv = new IvParameterSpec(ivarr);
+
+        }
+
+
+    }
+
+
+    @Override
+    byte[] encrypt(String msg) throws IllegalBlockSizeException, BadPaddingException, InvalidKeyException, InvalidAlgorithmParameterException {
+        cipher.init(Cipher.ENCRYPT_MODE, key, iv);
+
+        return cipher.doFinal(msg.getBytes());
+    }
+
+
+    @Override
+    String decrypt(Object msg) throws IllegalBlockSizeException, BadPaddingException, InvalidKeyException, InvalidAlgorithmParameterException {
+        byte[] encryptedMessage = (byte[]) msg;
+        cipher.init(Cipher.DECRYPT_MODE, key, iv);
+
+        byte[] encryptedMsg = cipher.doFinal(encryptedMessage);
+
+        return new String(encryptedMsg);
+    }
+}
+
 
 class RSA extends Algorithm {
     Cipher cipher;
@@ -332,7 +407,7 @@ class RSA extends Algorithm {
 
 
     @Override
-    String decrypt(Object msg) throws IllegalBlockSizeException, BadPaddingException, InvalidKeyException, InvalidAlgorithmParameterException {
+    String decrypt(Object msg) throws IllegalBlockSizeException, BadPaddingException, InvalidKeyException {
         byte[] encryptedMessage = (byte[]) msg;
         cipher.init(Cipher.DECRYPT_MODE, privateKey);
 

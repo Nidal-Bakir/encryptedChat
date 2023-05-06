@@ -33,7 +33,8 @@ public class Server {
             String stringBuffer = "choose the encryption algorithm: (Send the number of the required algorithm)\n" +
                     "1) Caesar\n" +
                     "2) DES/CBC/PkCS5Padding\n" +
-                    "3) RSA\n";
+                    "3) AES/CBC/PkCS5Padding\n" +
+                    "4) RSA\n";
             oos.writeUTF(stringBuffer);
             oos.flush();
 
